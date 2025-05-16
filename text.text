@@ -1,0 +1,78 @@
+при создании бд такая была
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE users ADD UNIQUE (name);
+
+
+ALTER TABLE users 
+ADD COLUMN coins INT DEFAULT 0,
+ADD COLUMN status ENUM('active', 'blocked') DEFAULT 'active';
+
+
+
+CREATE TABLE admins (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE moderator (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE moderator_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    moderator_id INT NOT NULL,
+    target_name VARCHAR(255) NOT NULL, -- имя пользователя, на кого идет запрос
+    action ENUM('give_coins', 'block_user', 'delete_user') NOT NULL,
+    coins INT DEFAULT 0,
+    note TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE user_topics (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    topic_id INT NOT NULL,
+    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, topic_id)
+);
+
+DELIMITER //
+
+CREATE TRIGGER add_coins_after_topic_completed
+AFTER INSERT ON user_topics
+FOR EACH ROW
+BEGIN
+    -- Добавляем 50 монет пользователю после того, как он завершает тему
+    UPDATE users
+    SET coins = coins + 50
+    WHERE id = NEW.user_id;
+END //
+
+DELIMITER ;
+
+SELECT u.name, u.coins, COUNT(ut.topic_id) AS solved_tasks
+FROM users u
+LEFT JOIN user_topics ut ON u.id = ut.user_id
+WHERE u.status = 'active'
+GROUP BY u.id
+ORDER BY solved_tasks DESC, coins DESC
+LIMIT 10;
+
+
+composer require vlucas/phpdotenv
+composer require setasign/fpdf
+composer require tecnickcom/tcpdf
